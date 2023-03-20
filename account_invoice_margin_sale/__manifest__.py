@@ -5,15 +5,19 @@
 {
     "name": "Account Invoice Margin Sale",
     "summary": "Set margin in invoices from sale orders",
-    "version": "15.0.1.0.0",
+    "version": "12.0.1.0.0",
     "development_status": "Production/Stable",
     "maintainers": ["sergio-teruel", "carlosdauden"],
     "category": "Account",
     "website": "https://github.com/OCA/margin-analysis",
-    "author": "Tecnativa, " "Odoo Community Association (OCA)",
+    "author": "Tecnativa, "
+              "Odoo Community Association (OCA)",
     "license": "AGPL-3",
     "application": False,
     "installable": True,
     "auto_install": True,
-    "depends": ["sale_margin", "account_invoice_margin"],
+    "depends": [
+        "sale_margin",
+        "account_invoice_margin",
+    ],
 }

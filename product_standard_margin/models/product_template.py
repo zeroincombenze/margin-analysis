@@ -5,7 +5,6 @@
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl.html).
 
 from odoo import api, fields, models
-
 import odoo.addons.decimal_precision as dp
 
 
@@ -38,19 +37,10 @@ class ProductTemplate(models.Model):
         "Take care of tax include and exclude.. If no sale price "
         "set, will display 999.0",
     )
-    standard_markup_rate = fields.Float(
-        compute="_compute_margin",
-        string="Theorical Markup (%)",
-        digits=dp.get_precision("Product Price"),
-        help="Markup rate is [ Theorical Margin / cost price (Wo Tax) ] "
-        "of the product form (not based on historical values)."
-        "Take care of tax include and exclude.. If no cost price "
-        "set, will display 999.0",
-    )
 
     # Compute Section
     @api.depends(
-        "list_price",
+        "lst_price",
         "standard_price",
         "taxes_id.price_include",
         "taxes_id.amount",
@@ -73,13 +63,5 @@ class ProductTemplate(models.Model):
                 template.standard_margin_rate = (
                     (template.list_price_vat_excl - template.standard_price)
                     / template.list_price_vat_excl
-                    * 100
-                )
-            if template.standard_price == 0:
-                template.standard_markup_rate = 999.0
-            else:
-                template.standard_markup_rate = (
-                    (template.list_price_vat_excl - template.standard_price)
-                    / template.standard_price
                     * 100
                 )

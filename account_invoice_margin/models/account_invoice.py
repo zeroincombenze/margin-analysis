@@ -1,97 +1,124 @@
-# Copyright 2017 Sergio Teruel <sergio.teruel@tecnativa.com>
+# © 2017 Sergio Teruel <sergio.teruel@tecnativa.com>
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl).
 
 from odoo import api, fields, models
+from odoo.addons import decimal_precision as dp
 
 
-class AccountMove(models.Model):
-    _inherit = "account.move"
+class AccountInvoice(models.Model):
+    _inherit = 'account.invoice'
 
     margin = fields.Monetary(
-        compute="_compute_margin",
+        string='Margin',
+        compute='_compute_margin',
+        digits=dp.get_precision('Product Price'),
         store=True,
-        currency_field="currency_id",
+        currency_field='currency_id',
     )
 
     margin_signed = fields.Monetary(
-        compute="_compute_margin",
+        string='Margin Signed',
+        compute='_compute_margin',
+        digits=dp.get_precision('Product Price'),
         store=True,
-        currency_field="currency_id",
+        currency_field='currency_id',
     )
 
     margin_percent = fields.Float(
-        string="Margin (%)",
-        digits="Product Price",
-        compute="_compute_margin",
+        string='Margin (%)',
+        digits=dp.get_precision('Product Price'),
+        compute='_compute_margin',
         store=True,
     )
 
-    def _get_margin_applicable_lines(self):
-        self.ensure_one()
-        return self.invoice_line_ids
-
+    @api.multi
     @api.depends(
-        "invoice_line_ids.margin",
-        "invoice_line_ids.margin_signed",
-        "invoice_line_ids.price_subtotal",
+        'invoice_line_ids.margin',
+        'invoice_line_ids.margin_signed',
+        'invoice_line_ids.price_subtotal',
     )
     def _compute_margin(self):
-        for invoice in self:
-            margin = 0.0
-            margin_signed = 0.0
-            price_subtotal = 0.0
-            for line in invoice._get_margin_applicable_lines():
-                margin += line.margin
-                margin_signed += line.margin_signed
-                price_subtotal += line.price_subtotal
-            invoice.margin = margin
-            invoice.margin_signed = margin_signed
-            invoice.margin_percent = (
-                price_subtotal and margin_signed / price_subtotal * 100 or 0.0
+        real_invoices = self.filtered(
+            lambda x: not isinstance(x.id, models.NewId))
+        virtual_invoices = self - real_invoices
+        chunks = (
+            real_invoices[i:i + models.PREFETCH_MAX]
+            for i in range(0, len(real_invoices), models.PREFETCH_MAX)
+        )
+        # split in chunks for not losing performance in IN SQL query
+        for chunk in chunks:
+            # quick computation with read_group for real DB records
+            res = self.env['account.invoice.line'].read_group(
+                [('invoice_id', 'in', chunk.ids)],
+                ['margin', 'margin_signed', 'price_subtotal'],
+                ['invoice_id'],
             )
+            for group in res:
+                invoice = self.browse(group['invoice_id'][0])
+                invoice.update({
+                    'margin': group['margin'],
+                    'margin_signed': group['margin_signed'],
+                    'margin_percent': (
+                        group['price_subtotal'] and
+                        group['margin_signed'] /
+                        group['price_subtotal'] * 100 or 0
+                    ),
+                })
+        # Normal computation for virtual IDs
+        for invoice in virtual_invoices:
+            invoice_lines = invoice.invoice_line_ids
+            price_subtotal = sum(invoice_lines.mapped('price_subtotal'))
+            margin_signed = sum(invoice_lines.mapped('margin_signed'))
+            invoice.update({
+                'margin': sum(invoice_lines.mapped('margin')),
+                'margin_signed': margin_signed,
+                'margin_percent': price_subtotal and (
+                    margin_signed / price_subtotal * 100) or 0,
+            })
 
 
-class AccountMoveLine(models.Model):
-    _inherit = "account.move.line"
+class AccountInvoiceLine(models.Model):
+    _inherit = 'account.invoice.line'
 
-    margin = fields.Float(compute="_compute_margin", digits="Product Price", store=True)
-    margin_signed = fields.Float(
-        compute="_compute_margin",
-        digits="Product Price",
+    margin = fields.Float(
+        compute='_compute_margin',
+        digits=dp.get_precision('Product Price'),
         store=True,
+        string='Margin',
+    )
+    margin_signed = fields.Float(
+        compute='_compute_margin',
+        digits=dp.get_precision('Product Price'),
+        store=True,
+        string='Margin Signed',
     )
     margin_percent = fields.Float(
-        string="Margin (%)", compute="_compute_margin", store=True, readonly=True
+        string='Margin (%)',
+        compute='_compute_margin',
+        store=True,
+        readonly=True,
     )
     purchase_price = fields.Float(
-        string="Cost",
-        compute="_compute_purchase_price",
-        store=True,
-        readonly=False,
-        digits="Product Price",
+        digits=dp.get_precision('Product Price'),
+        string='Cost',
     )
 
-    @api.depends("purchase_price", "price_subtotal")
+    @api.depends('purchase_price', 'price_subtotal')
     def _compute_margin(self):
-        for line in self:
-            if line.move_id and line.move_id.move_type[:2] == "in":
-                line.update(
-                    {"margin": 0.0, "margin_signed": 0.0, "margin_percent": 0.0}
-                )
-                continue
-            tmp_margin = line.price_subtotal - (line.purchase_price * line.quantity)
-            sign = line.move_id.move_type in ["in_refund", "out_refund"] and -1 or 1
-            line.update(
-                {
-                    "margin": tmp_margin,
-                    "margin_signed": tmp_margin * sign,
-                    "margin_percent": (
-                        tmp_margin / line.price_subtotal * 100.0
-                        if line.price_subtotal
-                        else 0.0
-                    ),
-                }
-            )
+        applicable = self.filtered(
+            lambda x: x.invoice_id and x.invoice_id.type[:2] != 'in'
+        )
+        for line in applicable:
+            tmp_margin = line.price_subtotal - (
+                line.purchase_price * line.quantity)
+            sign = line.invoice_id.type in [
+                'in_refund', 'out_refund'] and -1 or 1
+            line.update({
+                'margin': tmp_margin,
+                'margin_signed': tmp_margin * sign,
+                'margin_percent': (tmp_margin / line.price_subtotal * 100.0 if
+                                   line.price_subtotal else 0.0),
+            })
 
     def _get_purchase_price(self):
         # Overwrite this function if you don't want to base your
@@ -99,23 +126,11 @@ class AccountMoveLine(models.Model):
         self.ensure_one()
         return self.product_id.standard_price
 
-    @api.depends("product_id", "product_uom_id")
-    def _compute_purchase_price(self):
-        for line in self:
-            if line.move_id.move_type in ["out_invoice", "out_refund"]:
-                purchase_price = line._get_purchase_price()
-                if line.product_uom_id != line.product_id.uom_id:
-                    purchase_price = line.product_id.uom_id._compute_price(
-                        purchase_price, line.product_uom_id
-                    )
-                move = line.move_id
-                company = move.company_id or self.env.company
-                line.purchase_price = company.currency_id._convert(
-                    purchase_price,
-                    move.currency_id,
-                    company,
-                    move.invoice_date or fields.Date.today(),
-                    round=False,
-                )
-            else:
-                line.purchase_price = 0.0
+    @api.onchange('product_id', 'uom_id')
+    def _onchange_product_id_account_invoice_margin(self):
+        if self.invoice_id.type in ['out_invoice', 'out_refund']:
+            purchase_price = self._get_purchase_price()
+            if self.uom_id != self.product_id.uom_id:
+                purchase_price = self.product_id.uom_id._compute_price(
+                    purchase_price, self.uom_id)
+            self.purchase_price = purchase_price

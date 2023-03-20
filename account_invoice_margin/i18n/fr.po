@@ -17,9 +17,14 @@ msgstr ""
 "Plural-Forms: \n"
 
 #. module: account_invoice_margin
-#: model:ir.model.fields,field_description:account_invoice_margin.field_account_move_line__purchase_price
-msgid "Cost"
-msgstr "Coût"
+#: model:ir.model,name:account_invoice_margin.model_account_invoice
+msgid "Invoice"
+msgstr "Facture"
+
+#. module: account_invoice_margin
+#: model:ir.model,name:account_invoice_margin.model_account_invoice_line
+msgid "Invoice Line"
+msgstr "Ligne de facture"
 
 #. module: account_invoice_margin
 #: model:ir.model,name:account_invoice_margin.model_account_invoice_report
@@ -27,33 +32,29 @@ msgid "Invoices Statistics"
 msgstr "Statistiques des factures"
 
 #. module: account_invoice_margin
-#: model:ir.model,name:account_invoice_margin.model_account_move
-msgid "Journal Entries"
-msgstr ""
-
-#. module: account_invoice_margin
-#: model:ir.model,name:account_invoice_margin.model_account_move_line
-msgid "Journal Item"
-msgstr ""
-
-#. module: account_invoice_margin
+#: model:ir.model.fields,field_description:account_invoice_margin.field_account_invoice__margin
+#: model:ir.model.fields,field_description:account_invoice_margin.field_account_invoice_line__margin
 #: model:ir.model.fields,field_description:account_invoice_margin.field_account_invoice_report__margin
-#: model:ir.model.fields,field_description:account_invoice_margin.field_account_move__margin
-#: model:ir.model.fields,field_description:account_invoice_margin.field_account_move_line__margin
 msgid "Margin"
 msgstr "Marge"
 
 #. module: account_invoice_margin
-#: model:ir.model.fields,field_description:account_invoice_margin.field_account_move__margin_percent
-#: model:ir.model.fields,field_description:account_invoice_margin.field_account_move_line__margin_percent
+#: model:ir.model.fields,field_description:account_invoice_margin.field_account_invoice__margin_percent
+#: model:ir.model.fields,field_description:account_invoice_margin.field_account_invoice_line__margin_percent
+#: model:ir.model.fields,field_description:account_invoice_margin.field_account_invoice_report__margin_percent
 msgid "Margin (%)"
 msgstr "Marge (%)"
 
 #. module: account_invoice_margin
-#: model:ir.model.fields,field_description:account_invoice_margin.field_account_move__margin_signed
-#: model:ir.model.fields,field_description:account_invoice_margin.field_account_move_line__margin_signed
+#: model:ir.model.fields,field_description:account_invoice_margin.field_account_invoice__margin_signed
+#: model:ir.model.fields,field_description:account_invoice_margin.field_account_invoice_line__margin_signed
 msgid "Margin Signed"
 msgstr "Marge"
+
+#. module: account_invoice_margin
+#: model:ir.model.fields,field_description:account_invoice_margin.field_account_invoice_line__purchase_price
+msgid "Purchase Price"
+msgstr ""
 
 #. module: account_invoice_margin
 #: model:res.groups,name:account_invoice_margin.group_account_invoice_margin_security
@@ -65,8 +66,5 @@ msgstr "Voir la marge sur les factures"
 msgid "Total"
 msgstr "Total"
 
-#~ msgid "Invoice"
-#~ msgstr "Facture"
-
-#~ msgid "Invoice Line"
-#~ msgstr "Ligne de facture"
+#~ msgid "Cost"
+#~ msgstr "Coût"
