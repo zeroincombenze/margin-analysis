@@ -23,7 +23,7 @@
 import logging
 import time
 from openerp.osv import orm, fields, expression
-import openerp.addons.decimal_precision as dp
+import decimal_precision as dp
 from openerp.tools import DEFAULT_SERVER_DATETIME_FORMAT
 
 # All field name of product that will be historize
